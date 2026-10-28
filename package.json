@@ -1,0 +1,18 @@
+{
+  "name": "gta-6-web",
+  "version": "1.0.0",
+  "private": true,
+  "description": "GTA 6 Web Edition - 3D Open World Vice City Experience",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "three": "^0.170.0"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0"
+  }
+}

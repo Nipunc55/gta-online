@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>GRAND THEFT AUTO VI - VICE CITY WEB</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌴</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,700;0,900;1,900&family=Teko:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/ui/styles.css" />
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="webgl-canvas"></canvas>
+
+    <!-- Hurt Vignette & Wasted Overlay -->
+    <div id="hurt-vignette" style="position:absolute;inset:0;pointer-events:none;z-index:35;background:radial-gradient(circle,transparent 55%,rgba(220,20,20,0.85) 100%);opacity:0;transition:opacity 0.08s;"></div>
+    <div id="wasted-banner" style="display:none;position:absolute;inset:0;pointer-events:none;z-index:80;background:rgba(0,0,0,0.55);align-items:center;justify-content:center;flex-direction:column;">
+      <div style="font-family:'Teko',sans-serif;font-size:110px;font-weight:700;letter-spacing:8px;color:#e74c3c;text-shadow:0 0 28px rgba(231,76,60,0.9),0 4px 12px #000;">WASTED</div>
+      <div style="font-size:15px;letter-spacing:3px;color:#eee;margin-top:-12px;">RESPAWNING AT PILLBOX HILL MEDICAL CENTER...</div>
+    </div>
+
+    <!-- Crosshair -->
+    <div id="crosshair" class="crosshair-hidden">
+      <div class="crosshair-dot"></div>
+      <div class="crosshair-ring"></div>
+      <div class="crosshair-lines">
+        <span class="line line-top"></span>
+        <span class="line line-bottom"></span>
+        <span class="line line-left"></span>
+        <span class="line line-right"></span>
+      </div>
+      <div id="hit-marker" class="hit-marker"></div>
+    </div>
+
+    <!-- HUD Overlay -->
+    <div id="hud-overlay">
+      <!-- Top Right: Wanted Stars, Money, Weapon -->
+      <div class="hud-top-right">
+        <div class="wanted-container" id="wanted-container">
+          <span class="wanted-star" data-star="1">★</span>
+          <span class="wanted-star" data-star="2">★</span>
+          <span class="wanted-star" data-star="3">★</span>
+          <span class="wanted-star" data-star="4">★</span>
+          <span class="wanted-star" data-star="5">★</span>
+        </div>
+        <div class="cash-display" id="cash-display">$1,250,480</div>
+        <div class="weapon-hud" id="weapon-hud">
+          <div class="weapon-icon" id="weapon-icon">🔫</div>
+          <div class="weapon-info">
+            <div class="weapon-name" id="weapon-name">COMBAT PISTOL</div>
+            <div class="weapon-ammo" id="weapon-ammo"><span>12</span> / 120</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top Left: Location & Time -->
+      <div class="hud-top-left">
+        <div class="location-name" id="location-name">OCEAN BEACH, VICE CITY</div>
+        <div class="location-sub" id="location-sub">LEONIDA STATE</div>
+      </div>
+
+      <!-- Center Bottom: Interactive Prompts -->
+      <div class="action-prompt" id="action-prompt">
+        <span class="prompt-key">[F]</span> <span class="prompt-text">ENTER VEHICLE</span>
+      </div>
+
+      <!-- Bottom Left: Minimap Radar & Vitals -->
+      <div class="hud-bottom-left">
+        <div class="radar-container">
+          <div class="radar-frame">
+            <canvas id="radar-canvas" width="200" height="200"></canvas>
+            <div class="radar-player-marker" id="radar-player-marker"></div>
+            <div class="radar-north">N</div>
+          </div>
+          <div class="vitals-container">
+            <div class="vital-bar armor-bar">
+              <div class="vital-fill" id="armor-fill" style="width: 100%;"></div>
+            </div>
+            <div class="vital-bar health-bar">
+              <div class="vital-fill" id="health-fill" style="width: 100%;"></div>
+            </div>
+            <div class="vital-bar stamina-bar">
+              <div class="vital-fill" id="stamina-fill" style="width: 100%;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Right: Speedometer & Vehicle Status -->
+      <div class="hud-bottom-right" id="vehicle-hud" style="display: none;">
+        <div class="speedo-container">
+          <svg class="speedo-dial" viewBox="0 0 160 160">
+            <defs>
+              <linearGradient id="speedoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#00ffff" />
+                <stop offset="50%" stop-color="#ff007f" />
+                <stop offset="100%" stop-color="#ff0033" />
+              </linearGradient>
+            </defs>
+            <circle class="speedo-bg-track" cx="80" cy="80" r="65" />
+            <circle class="speedo-rpm-track" id="speedo-rpm-circle" cx="80" cy="80" r="65" stroke="url(#speedoGradient)" />
+          </svg>
+          <div class="speedo-center">
+            <div class="speedo-speed" id="speed-display">0</div>
+            <div class="speedo-unit">MPH</div>
+            <div class="speedo-gear" id="gear-display">1</div>
+          </div>
+        </div>
+        <div class="car-model-name" id="car-model-name">GROTTI CHEETAH GT</div>
+      </div>
+
+      <!-- Radio Station Banner (Shows when changing stations) -->
+      <div class="radio-banner" id="radio-banner">
+        <div class="radio-icon">📻</div>
+        <div class="radio-details">
+          <div class="radio-station" id="radio-station">FLASH FM 102.9</div>
+          <div class="radio-track" id="radio-track">Outrun Sunset - Synthwave Radio</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Start / Title Screen -->
+    <div id="start-screen" class="screen-overlay">
+      <div class="start-card">
+        <div class="gta-logo">
+          <h2 class="grand-theft-auto">grand theft auto</h2>
+          <h1 class="gta-six-title">VI</h1>
+          <div class="vice-city-badge">VICE CITY WEB</div>
+        </div>
+        <p class="start-desc">Explore the sun-soaked neon paradise of Vice City. Drive supercars, outrun the police, and dominate the streets.</p>
+        
+        <div class="controls-overview">
+          <div class="control-item"><span class="badge">WASD</span> Move / Drive</div>
+          <div class="control-item"><span class="badge">MOUSE</span> Look & Aim</div>
+          <div class="control-item"><span class="badge">L-CLICK</span> Attack / Shoot</div>
+          <div class="control-item"><span class="badge">R-CLICK</span> Aim Weapon</div>
+          <div class="control-item"><span class="badge">F</span> Enter / Hijack / Exit</div>
+          <div class="control-item"><span class="badge">SPACE</span> Jump / Handbrake</div>
+          <div class="control-item"><span class="badge">1-5</span> Switch Weapons</div>
+          <div class="control-item"><span class="badge">R</span> Reload Weapon</div>
+          <div class="control-item"><span class="badge">Q</span> Radio Station</div>
+          <div class="control-item"><span class="badge">E</span> Car Horn / Siren</div>
+          <div class="control-item"><span class="badge">H</span> Headlights</div>
+          <div class="control-item"><span class="badge">C</span> Camera Angle</div>
+          <div class="control-item"><span class="badge">ESC</span> Pause Menu</div>
+        </div>
+
+        <button id="start-btn" class="gta-button neon-glow">ENTER VICE CITY</button>
+        <div class="settings-quick">
+          <label>Graphics Quality: </label>
+          <select id="quality-select">
+            <option value="high" selected>High (PBR + Shadows + Bloom)</option>
+            <option value="medium">Medium (Balanced)</option>
+            <option value="low">Low (Fast Performance)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pause / Controls Menu (Esc) -->
+    <div id="pause-screen" class="screen-overlay" style="display: none;">
+      <div class="pause-card">
+        <h2>VICE CITY PAUSED</h2>
+        <div class="keybinds-list">
+          <div><span>WASD</span> Move Player / Accelerate & Steer Car</div>
+          <div><span>Shift</span> Sprint (on foot)</div>
+          <div><span>Space</span> Jump (on foot) / Handbrake Drift (in car)</div>
+          <div><span>F</span> Enter / Hijack / Exit Vehicle</div>
+          <div><span>Left Click</span> Punch / Shoot Weapon</div>
+          <div><span>Right Click</span> Aim Weapon</div>
+          <div><span>1 - 5 / Scroll</span> Switch Fists / Pistol / SMG / Shotgun / Rifle</div>
+          <div><span>R</span> Reload Weapon</div>
+          <div><span>Q</span> Change Radio Station (in car)</div>
+          <div><span>E</span> Car Horn / Police Siren</div>
+          <div><span>H</span> Toggle Vehicle Headlights (Auto-ON at Night)</div>
+          <div><span>T</span> Advance Time of Day / Weather</div>
+          <div><span>C</span> Change Camera View (in car)</div>
+          <div><span>Esc / P</span> Pause / Resume</div>
+        </div>
+        <button id="resume-btn" class="gta-button">RESUME GAME</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
