@@ -85,6 +85,43 @@ export class PedestrianSystem {
     return this.createNPC(ix, iz, 'police', { x, z });
   }
 
+  /**
+   * Spawn a stationary armed syndicate guard for story missions.
+   * Holds position until player approaches or attacks, and carries an overhead 3D target marker.
+   */
+  spawnMissionGuard(x, z, rotationY = 0) {
+    const ix = this.layout.nearestWalkIndex(x);
+    const iz = this.layout.nearestWalkIndex(z);
+    const npc = this.createNPC(ix, iz, 'gang', { x, z });
+    npc.rotationY = rotationY;
+    npc.mesh.rotation.y = rotationY;
+    npc.state = 'GUARD';
+    npc.health = 110;
+    npc.maxHealth = 110;
+    npc.isMissionActor = true;
+    npc.isMissionTarget = true;
+    npc.guardOrigin = new THREE.Vector3(x, npc.position.y, z);
+
+    // Overhead crimson diamond indicator so player can track syndicate guards
+    const markerGeo = new THREE.OctahedronGeometry(0.22, 0);
+    const markerMat = new THREE.MeshBasicMaterial({ color: 0xff1744 });
+    const marker = new THREE.Mesh(markerGeo, markerMat);
+    marker.position.set(0, 2.25, 0);
+    npc.mesh.add(marker);
+    npc.targetMarker = marker;
+    return npc;
+  }
+
+  clearMissionActors() {
+    for (let i = this.pedestrians.length - 1; i >= 0; i--) {
+      const p = this.pedestrians[i];
+      if (p.isMissionActor) {
+        this.scene.remove(p.mesh);
+        this.pedestrians.splice(i, 1);
+      }
+    }
+  }
+
   /** Alert nearby NPCs when a gunshot or explosion happens. */
   alertGunshot(origin, radius = 38) {
     for (let i = 0; i < this.pedestrians.length; i++) {
@@ -134,6 +171,7 @@ export class PedestrianSystem {
     ped.stateTimer = 8.0;
     ped.mesh.rotation.x = -Math.PI / 2;
     ped.mesh.position.y = ped.position.y + 0.15;
+    if (ped.targetMarker) ped.targetMarker.visible = false;
 
     // Spawn floating cash pickup
     this.spawnCashPickup(ped.position.x, ped.position.z, ped.role === 'gang' ? 120 : 45);
@@ -183,6 +221,13 @@ export class PedestrianSystem {
           const dx = p.position.x - car.position.x;
           const dz = p.position.z - car.position.z;
           if (dx * dx + dz * dz < (car.halfW + 0.55) ** 2) {
+            // Friendly police cars nudge foot officers out of the way instead of running them over
+            if (p.role === 'police' && car.driver === 'police') {
+              const d = Math.hypot(dx, dz) || 1;
+              p.position.x += (dx / d) * 1.4;
+              p.position.z += (dz / d) * 1.4;
+              continue;
+            }
             // Launch ragdoll!
             p.state = 'RAGDOLL';
             p.stateTimer = 2.2;
@@ -199,7 +244,12 @@ export class PedestrianSystem {
       if (p.state === 'DEAD') {
         p.stateTimer -= dt;
         if (p.stateTimer <= 0) {
-          this.recyclePedestrian(p, playerPos);
+          if (p.isMissionActor) {
+            this.scene.remove(p.mesh);
+            this.pedestrians.splice(i, 1);
+          } else {
+            this.recyclePedestrian(p, playerPos);
+          }
         }
         continue;
       }
@@ -223,6 +273,9 @@ export class PedestrianSystem {
           p.mesh.rotation.set(0, p.rotationY, 0);
           if (p.health <= 0) {
             this.killPedestrian(p);
+          } else if (p.isMissionActor) {
+            p.state = 'COMBAT';
+            p.stateTimer = 60;
           } else {
             p.state = 'FLEE';
             p.stateTimer = 8;
@@ -231,41 +284,110 @@ export class PedestrianSystem {
         continue;
       }
 
-      // Recycle far-away ambient NPCs closer to player
+      // Recycle far-away ambient NPCs closer to player (never recycle mission actors)
       const distToPlayer = Math.hypot(p.position.x - playerPos.x, p.position.z - playerPos.z);
-      if (distToPlayer > 190 && p.role !== 'police') {
+      if (distToPlayer > 190 && p.role !== 'police' && !p.isMissionActor) {
         this.recyclePedestrian(p, playerPos);
         continue;
+      }
+
+      if (p.targetMarker && p.targetMarker.visible) {
+        p.targetMarker.rotation.y += dt * 3.2;
+        p.targetMarker.position.y = 2.22 + Math.sin(performance.now() * 0.006) * 0.12;
       }
 
       let moving = false;
       let sprinting = false;
       let aiming = false;
 
-      if (p.state === 'COMBAT') {
+      if (p.state === 'GUARD') {
+        // Hold post until player enters detection radius
+        if (distToPlayer < 35 && player.isAlive) {
+          p.state = 'COMBAT';
+          p.stateTimer = 120;
+        }
+      } else if (p.state === 'COMBAT') {
         p.stateTimer -= dt;
         const dx = playerPos.x - p.position.x;
         const dz = playerPos.z - p.position.z;
         const dist = Math.hypot(dx, dz);
         p.rotationY = lerpAngle(p.rotationY, yawFromDir(dx, dz), damp(10, dt));
 
-        if (!player.isAlive || (p.role !== 'police' && p.stateTimer <= 0)) {
-          p.state = 'WALK';
+        const fx = -Math.sin(p.rotationY), fz = -Math.cos(p.rotationY);
+        const rx = Math.cos(p.rotationY), rz = -Math.sin(p.rotationY);
+
+        // Tactical spacing between fellow officers/combatants + dodging oncoming vehicles
+        let sepX = 0, sepZ = 0;
+        if (p.role === 'police') {
+          for (let j = 0; j < this.pedestrians.length; j++) {
+            const other = this.pedestrians[j];
+            if (other === p || other.state === 'DEAD') continue;
+            const odx = p.position.x - other.position.x;
+            const odz = p.position.z - other.position.z;
+            const od2 = odx * odx + odz * odz;
+            if (od2 > 0.01 && od2 < 14.0) {
+              const od = Math.sqrt(od2);
+              const push = (3.75 - od) / 3.75;
+              sepX += (odx / od) * push * 2.4;
+              sepZ += (odz / od) * push * 2.4;
+            }
+          }
+          if (allCars) {
+            for (let c = 0; c < allCars.length; c++) {
+              const car = allCars[c];
+              if (Math.abs(car.speed) < 3.0) continue;
+              const cdx = p.position.x - car.position.x;
+              const cdz = p.position.z - car.position.z;
+              const cd = Math.hypot(cdx, cdz);
+              if (cd < 9.5) {
+                const cFwdX = -Math.sin(car.rotationY) * Math.sign(car.speed);
+                const cFwdZ = -Math.cos(car.rotationY) * Math.sign(car.speed);
+                const ahead = cdx * cFwdX + cdz * cFwdZ;
+                if (ahead > 0) {
+                  // Sidestep perpendicular to oncoming vehicle
+                  const cRightX = -cFwdZ, cRightZ = cFwdX;
+                  const side = (cdx * cRightX + cdz * cRightZ) >= 0 ? 1 : -1;
+                  sepX += cRightX * side * 4.8;
+                  sepZ += cRightZ * side * 4.8;
+                  moving = true;
+                }
+              }
+            }
+          }
+        }
+
+        if (!player.isAlive || (p.role !== 'police' && !p.isMissionActor && p.stateTimer <= 0)) {
+          p.state = p.isMissionActor ? 'GUARD' : 'WALK';
         } else if (dist > 22) {
-          // Sprint toward player
+          // Sprint toward player while maintaining squad spread
           moving = true;
           sprinting = true;
-          const fx = -Math.sin(p.rotationY), fz = -Math.cos(p.rotationY);
-          p.position.x += fx * p.runSpeed * dt;
-          p.position.z += fz * p.runSpeed * dt;
+          p.position.x += (fx * p.runSpeed + sepX) * dt;
+          p.position.z += (fz * p.runSpeed + sepZ) * dt;
         } else {
-          // Aim and fire at player if line-of-sight is clear
+          // Aim and fire at player with smart standoff range & tactical strafing
           aiming = true;
-          if (dist > 9) {
+          if (dist > 13.5) {
             moving = true;
-            const fx = -Math.sin(p.rotationY), fz = -Math.cos(p.rotationY);
-            p.position.x += fx * (p.walkSpeed * 1.1) * dt;
-            p.position.z += fz * (p.walkSpeed * 1.1) * dt;
+            p.position.x += (fx * (p.walkSpeed * 1.15) + sepX) * dt;
+            p.position.z += (fz * (p.walkSpeed * 1.15) + sepZ) * dt;
+          } else if (p.role === 'police' && dist < 7.5) {
+            // Backpedal if suspect or vehicle gets dangerously close
+            moving = true;
+            p.position.x += (-fx * p.walkSpeed + sepX) * dt;
+            p.position.z += (-fz * p.walkSpeed + sepZ) * dt;
+          } else if (Math.abs(sepX) + Math.abs(sepZ) > 0.25) {
+            moving = true;
+            p.position.x += sepX * dt;
+            p.position.z += sepZ * dt;
+          } else if (p.role === 'police') {
+            // Subtle lateral tactical strafe while holding firing line
+            const strafeDir = Math.sin(performance.now() * 0.0018 + i * 1.7);
+            if (Math.abs(strafeDir) > 0.55) {
+              moving = true;
+              p.position.x += rx * Math.sign(strafeDir) * (p.walkSpeed * 0.65) * dt;
+              p.position.z += rz * Math.sign(strafeDir) * (p.walkSpeed * 0.65) * dt;
+            }
           }
           p.shootCooldown -= dt;
           if (p.shootCooldown <= 0 && dist < 34) {
@@ -278,7 +400,6 @@ export class PedestrianSystem {
               const vol = clamp(1 - dist / 45, 0.15, 0.85);
               if (this.audio) this.audio.play('gunshot', vol, false);
               if (effects) {
-                const fx = -Math.sin(p.rotationY), fz = -Math.cos(p.rotationY);
                 const muzzle = new THREE.Vector3(p.position.x + fx * 0.6, p.position.y + 1.35, p.position.z + fz * 0.6);
                 effects.spawnTracer(muzzle, new THREE.Vector3(
                   playerPos.x + (Math.random() - 0.5) * 1.1,

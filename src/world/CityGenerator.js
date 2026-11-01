@@ -545,9 +545,33 @@ export class CityGenerator {
 
   genPolice(block, r, W, D) {
     const cx = block.cx, cz = r.z0 + 14;
+    const frontZ = cz - 11.0; // -165.5
     this.building(W, D, cx, cz, 50, 22, 14, 0x9aa7b8, { windows: { u: 3, v: 3.5 }, trim: 0x2c3e66 });
-    D.box(cx, CURB_H + 4.2, cz - 11.1, 50.2, 0.8, 0.2, 0x2c3e66);
-    this.sign('POLICE', cx, CURB_H + 10, cz - 11.15, Math.PI, 16, 3.2, { bg: '#1f3a72', color: '#ffffff', border: '#ffffff' });
+    D.box(cx, CURB_H + 4.2, frontZ - 0.1, 50.2, 0.8, 0.2, 0x2c3e66);
+    this.sign('POLICE', cx, CURB_H + 10.2, frontZ - 0.15, Math.PI, 16, 3.2, { bg: '#1f3a72', color: '#ffffff', border: '#ffffff' });
+    this.sign('PRECINCT 04 — DETENTION & RELEASE', cx, CURB_H + 5.6, frontZ - 0.15, Math.PI, 15, 1.3, { bg: '#141c2b', color: '#f1c40f', border: '#2c3e66' });
+
+    // Security Release Gate archway & dark recessed prison vestibule
+    D.box(cx, CURB_H + 2.1, frontZ - 0.12, 5.6, 4.2, 0.35, 0x2c3e66); // Steel frame
+    D.box(cx, CURB_H + 1.85, frontZ - 0.22, 4.4, 3.7, 0.2, 0x0d121a); // Dark interior recess
+    D.box(cx, CURB_H + 3.9, frontZ - 1.2, 6.4, 0.35, 2.4, 0x1f3a72);  // Release canopy overhang
+
+    // Vertical prison steel bars across the entrance recess
+    for (let bx = -1.8; bx <= 1.8; bx += 0.45) {
+      // Leave center gap slightly parted where the player steps out
+      if (Math.abs(bx) < 0.35) continue;
+      D.box(cx + bx, CURB_H + 1.85, frontZ - 0.28, 0.08, 3.6, 0.08, 0x7f8c8d);
+    }
+    // Horizontal cross-bars
+    D.box(cx, CURB_H + 3.1, frontZ - 0.28, 4.4, 0.1, 0.1, 0x7f8c8d);
+
+    // Concrete release walkway to the sidewalk & yellow/black security bollards
+    D.box(cx, CURB_H + 0.03, frontZ - 3.2, 5.2, 0.06, 6.4, 0x6c727a);
+    for (const side of [-3.2, 3.2]) {
+      D.box(cx + side, CURB_H + 0.55, frontZ - 2.2, 0.32, 1.1, 0.32, 0xf1c40f);
+      D.box(cx + side, CURB_H + 0.55, frontZ - 4.8, 0.32, 1.1, 0.32, 0xf1c40f);
+    }
+
     // lot for cruisers
     for (let x = r.x0 + 6; x < r.x1 - 6; x += 4) {
       D.box(x - 2, CURB_H + 0.02, r.z1 - 12, 0.15, 0.03, 5.2, 0xe8e8e8);

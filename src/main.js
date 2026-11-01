@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GameRenderer } from './core/Renderer.js';
 import { CameraController } from './core/CameraController.js';
+import { CutsceneDirector } from './core/CutsceneDirector.js';
 import { InputManager } from './core/InputManager.js';
 import { AudioManager } from './core/AudioManager.js';
 import { EventBus } from './core/EventBus.js';
@@ -23,6 +24,7 @@ import { WeaponSystem } from './combat/WeaponSystem.js';
 import { HUD } from './ui/HUD.js';
 import { Speedometer } from './ui/Speedometer.js';
 import { RadioWheel } from './ui/RadioWheel.js';
+import { MissionManager } from './missions/MissionManager.js';
 
 class Game {
   constructor() {
@@ -97,10 +99,12 @@ class Game {
       this.traffic
     );
 
-    // UI
+    // UI, Cutscene Director & Story Mission Manager
     this.hud = new HUD(this.player, this.police, this.weapons, this.layout);
     this.speedometer = new Speedometer();
     this.radioWheel = new RadioWheel(this.audio);
+    this.cutscene = new CutsceneDirector(this);
+    this.missions = new MissionManager(this);
 
     this.isRunning = false;
     this.isPaused = false;
@@ -109,8 +113,11 @@ class Game {
     this.bindEvents();
     this.initUIEvents();
 
-    // Render initial preview frame behind the start screen
-    this.cameraController.update(0.016, this.player.position, this.player.rotationY, 0);
+    // Stage initial preview frame at Precinct 04 behind the start screen
+    this.player.position.set(-135.0, 0.15, -166.2);
+    this.player.mesh.position.copy(this.player.position);
+    this.camera.position.set(-148.0, 14.0, -188.0);
+    this.camera.lookAt(-135.0, 5.5, -158.0);
     this.skyAndLighting.update(0.016, this.player.position);
     this.renderer.render(this.scene, this.camera);
   }
@@ -137,6 +144,8 @@ class Game {
     const startScreen = document.getElementById('start-screen');
     const pauseScreen = document.getElementById('pause-screen');
     const resumeBtn = document.getElementById('resume-btn');
+    const nextMissionBtn = document.getElementById('next-mission-btn');
+    const replayCutsceneBtn = document.getElementById('replay-cutscene-btn');
     const qualitySelect = document.getElementById('quality-select');
 
     startBtn.addEventListener('click', () => {
@@ -147,6 +156,9 @@ class Game {
       if (!this.isRunning) {
         this.isRunning = true;
         this.clock.start();
+        this.cutscene.playPrisonReleaseIntro(() => {
+          this.missions.startStoryFromBeginning();
+        });
         this.animate();
       }
     });
@@ -156,6 +168,26 @@ class Game {
       pauseScreen.style.display = 'none';
       this.input.requestPointerLock();
     });
+
+    if (nextMissionBtn) {
+      nextMissionBtn.addEventListener('click', () => {
+        this.isPaused = false;
+        pauseScreen.style.display = 'none';
+        this.input.requestPointerLock();
+        this.missions.cycleMission();
+      });
+    }
+
+    if (replayCutsceneBtn) {
+      replayCutsceneBtn.addEventListener('click', () => {
+        this.isPaused = false;
+        pauseScreen.style.display = 'none';
+        this.input.requestPointerLock();
+        this.cutscene.playPrisonReleaseIntro(() => {
+          this.missions.startStoryFromBeginning();
+        });
+      });
+    }
 
     qualitySelect.addEventListener('change', (e) => {
       this.renderer.setQuality(e.target.value);
@@ -285,6 +317,28 @@ class Game {
     this.props.updateNightLights(this.skyAndLighting.isNight, this.skyAndLighting.nightFactor);
     this.cityGen.updateNightLights(this.skyAndLighting.nightFactor);
 
+    // 1b. Active Cutscene Sequencer override
+    if (this.cutscene && this.cutscene.isPlaying) {
+      this.input.consumeMouseDelta();
+      this.cutscene.update(dt);
+      const focusPos = this.player.position;
+      this.props.update(dt, focusPos, this.skyAndLighting.isNight, this.skyAndLighting.nightFactor);
+      this.effects.update(dt);
+      this.skyAndLighting.update(dt, focusPos);
+      this.renderer.render(this.scene, this.camera);
+      this.input.resetFrame();
+      return;
+    }
+
+    // Hotkey [B] to replay the Prison Release Intro Cutscene anytime
+    if (this.input.wasKeyJustPressed('KeyB')) {
+      this.cutscene.playPrisonReleaseIntro(() => {
+        this.missions.startStoryFromBeginning();
+      });
+      this.input.resetFrame();
+      return;
+    }
+
     // 2. Camera mouse look
     const mouseDelta = this.input.consumeMouseDelta();
     this.cameraController.handleMouseDelta(mouseDelta.x, mouseDelta.y);
@@ -331,7 +385,7 @@ class Game {
     const focusPos = this.player.position;
     this.props.update(dt, focusPos, this.skyAndLighting.isNight, this.skyAndLighting.nightFactor);
     this.traffic.update(dt, focusPos, allCars, this.effects);
-    this.police.update(dt, this.player, this.effects);
+    this.police.update(dt, this.player, this.effects, allCars);
     Vehicle.resolveVehiclePairs(allCars, this.audio, this.effects);
 
     this.pedestrians.update(dt, this.player, allCars, this.effects, (ped, car) => {
@@ -344,10 +398,15 @@ class Game {
       }
     });
 
-    // 8. Sky & Ocean follow
+    // 8. Story Missions & Waypoint Markers
+    if (this.missions) {
+      this.missions.update(dt);
+    }
+
+    // 9. Sky & Ocean follow
     this.skyAndLighting.update(dt, focusPos);
 
-    // 9. HUD & Radar
+    // 10. HUD & Radar
     const activeRotY = (this.player.inVehicle && this.player.currentVehicle)
       ? this.player.currentVehicle.rotationY
       : this.player.rotationY;
@@ -358,10 +417,11 @@ class Game {
       allCars,
       this.police.policeCars,
       this.pedestrians.pedestrians,
-      this.skyAndLighting
+      this.skyAndLighting,
+      this.missions ? this.missions.getActiveWaypoint() : null
     );
 
-    // 10. Render frame
+    // 11. Render frame
     this.renderer.render(this.scene, this.camera);
     this.input.resetFrame();
   }

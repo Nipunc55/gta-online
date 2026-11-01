@@ -144,6 +144,7 @@
           <div class="control-item"><span class="badge">E</span> Car Horn / Siren</div>
           <div class="control-item"><span class="badge">H</span> Headlights</div>
           <div class="control-item"><span class="badge">C</span> Camera Angle</div>
+          <div class="control-item"><span class="badge">M</span> Story Missions</div>
           <div class="control-item"><span class="badge">ESC</span> Pause Menu</div>
         </div>
 
@@ -177,9 +178,15 @@
           <div><span>H</span> Toggle Vehicle Headlights (Auto-ON at Night)</div>
           <div><span>T</span> Advance Time of Day / Weather</div>
           <div><span>C</span> Change Camera View (in car)</div>
+          <div><span>M</span> Cycle / Replay Story Missions & Street Race</div>
+          <div><span>B</span> Replay Prison Release Intro Cutscene</div>
           <div><span>Esc / P</span> Pause / Resume</div>
         </div>
-        <button id="resume-btn" class="gta-button">RESUME GAME</button>
+        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+          <button id="resume-btn" class="gta-button">RESUME GAME</button>
+          <button id="next-mission-btn" class="gta-button" style="background:linear-gradient(135deg,#2ecc71,#27ae60);box-shadow:0 0 18px rgba(46,204,113,0.45);">NEXT MISSION [M]</button>
+          <button id="replay-cutscene-btn" class="gta-button" style="background:linear-gradient(135deg,#00b4db,#0083b0);box-shadow:0 0 18px rgba(0,180,219,0.45);">REPLAY CUTSCENE [B]</button>
+        </div>
       </div>
     </div>
   </div>

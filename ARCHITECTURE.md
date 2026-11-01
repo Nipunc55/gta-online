@@ -13,6 +13,7 @@ src/
 │   ├── EventBus.js              # Lightweight pub/sub for gameplay events (damage, wasted, kills)
 │   ├── InputManager.js          # Keyboard, mouse buttons, pointer lock, wheel delta & per-frame edges
 │   ├── CameraController.js      # Third-person FOOT / VEHICLE / HOOD camera with wall-clip raycast & recoil
+│   ├── CutsceneDirector.js      # Multi-shot cinematic sequencer, widescreen letterboxing, subtitles & actor staging
 │   ├── Renderer.js              # WebGLRenderer with ACES tone mapping, soft shadows & quality presets
 │   └── AudioManager.js          # Procedural Web Audio synth (engine RPM, tire squeal, guns, sirens, radio, explosions)
 ├── world/
@@ -34,8 +35,13 @@ src/
 ├── combat/
 │   ├── WeaponSystem.js          # 5 weapons (Fists, Pistol, Micro SMG, Pump Shotgun, Carbine Rifle), magazines & reload [R], spread, recoil, occluded raycasting
 │   └── ImpactEffects.js         # Sparks, blood splatter, bullet tracers, drift/damage smoke, vehicle explosion fireballs
+├── missions/
+│   ├── Mission.js               # Base mission lifecycle class (stages, objectives, waypoints, timers, rewards)
+│   ├── MissionManager.js        # Story progression coordinator, live encrypted comms banner, Mission Passed fanfare & Pay'n'Spray
+│   ├── StoryMissions.js         # 3-part "Out on Bail" story trilogy + repeatable "Neon Boulevard Sprint" street race
+│   └── WaypointMarker.js        # 3D glowing waypoint beacon, floating chevron arrow, Lamar's Safehouse & Pay'n'Spray landmarks
 └── ui/
-    ├── HUD.js                   # Rotating minimap radar, vitals bars, cash counter, weapon/ammo display, wanted stars, wasted banner
+    ├── HUD.js                   # Rotating minimap radar with GPS pathfinding route line, vitals bars, cash counter, weapon/ammo, wanted stars
     ├── Speedometer.js           # SVG RPM dial, digital MPH readout, gear indicator
     ├── RadioWheel.js            # Radio station banner notification
     └── styles.css               # HUD & overlay styling

@@ -42,7 +42,7 @@ export class HUD {
     }
   }
 
-  update(playerPos, playerRotationY, cameraYaw, trafficCars, policeCars, pedestrians = [], skyAndLighting = null) {
+  update(playerPos, playerRotationY, cameraYaw, trafficCars, policeCars, pedestrians = [], skyAndLighting = null, activeWaypoint = null) {
     // 1. Vitals & Cash
     if (this.healthFill) {
       this.healthFill.style.width = `${(this.player.health / this.player.maxHealth) * 100}%`;
@@ -112,10 +112,10 @@ export class HUD {
       const deg = (cameraYaw - playerRotationY) * (180 / Math.PI);
       this.playerMarker.style.transform = `translate(-50%, -50%) rotate(${deg}deg)`;
     }
-    this.renderRadar(playerPos, cameraYaw, trafficCars, policeCars, pedestrians);
+    this.renderRadar(playerPos, cameraYaw, trafficCars, policeCars, pedestrians, activeWaypoint);
   }
 
-  renderRadar(playerPos, cameraYaw, trafficCars, policeCars, pedestrians) {
+  renderRadar(playerPos, cameraYaw, trafficCars, policeCars, pedestrians, activeWaypoint = null) {
     if (!this.radarCtx) return;
     const ctx = this.radarCtx;
     const size = 200;
@@ -157,6 +157,29 @@ export class HUD {
       ctx.fillRect(-ROAD_EXTENT * scale, (r - ROAD_HALF) * scale, ROAD_EXTENT * 2 * scale, ROAD_HALF * 2 * scale);
     }
 
+    // GPS Route Line to Active Mission Waypoint
+    if (activeWaypoint && this.layout) {
+      const hex = activeWaypoint.color
+        ? `#${activeWaypoint.color.toString(16).padStart(6, '0')}`
+        : '#f1c40f';
+      const nFrom = this.layout.nearestNode(playerPos.x, playerPos.z);
+      const nTo = this.layout.nearestNode(activeWaypoint.x, activeWaypoint.z);
+      const path = nFrom && nTo ? this.layout.findPath(nFrom.id, nTo.id) : [];
+
+      ctx.strokeStyle = hex;
+      ctx.lineWidth = 3.2;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(playerPos.x * scale, playerPos.z * scale);
+      for (const nid of path) {
+        const node = this.layout.getNode(nid);
+        if (node) ctx.lineTo(node.x * scale, node.z * scale);
+      }
+      ctx.lineTo(activeWaypoint.x * scale, activeWaypoint.z * scale);
+      ctx.stroke();
+    }
+
     // Traffic blips
     if (trafficCars) {
       ctx.fillStyle = '#4dd0e1';
@@ -168,13 +191,14 @@ export class HUD {
       }
     }
 
-    // Hostile / combat NPC blips
+    // Hostile / combat / mission target NPC blips
     if (pedestrians) {
       for (const p of pedestrians) {
-        if (p.state !== 'COMBAT') continue;
-        ctx.fillStyle = p.role === 'police' ? '#3399ff' : '#ff3333';
+        if (p.state === 'DEAD') continue;
+        if (p.state !== 'COMBAT' && !p.isMissionTarget) continue;
+        ctx.fillStyle = p.role === 'police' ? '#3399ff' : '#ff1744';
         ctx.beginPath();
-        ctx.arc(p.position.x * scale, p.position.z * scale, 2.8, 0, Math.PI * 2);
+        ctx.arc(p.position.x * scale, p.position.z * scale, p.isMissionTarget ? 3.5 : 2.8, 0, Math.PI * 2);
         ctx.fill();
       }
     }
@@ -192,5 +216,34 @@ export class HUD {
     }
 
     ctx.restore();
+
+    // Draw Active Mission Waypoint Blip (clamped to radar edge if outside view radius)
+    if (activeWaypoint) {
+      ctx.save();
+      ctx.translate(center, center);
+      ctx.rotate(cameraYaw);
+
+      const dx = (activeWaypoint.x - playerPos.x) * scale;
+      const dz = (activeWaypoint.z - playerPos.z) * scale;
+      const dist = Math.hypot(dx, dz);
+      const maxR = center - 10;
+      const bx = dist > maxR ? (dx / dist) * maxR : dx;
+      const bz = dist > maxR ? (dz / dist) * maxR : dz;
+
+      const hex = activeWaypoint.color
+        ? `#${activeWaypoint.color.toString(16).padStart(6, '0')}`
+        : '#f1c40f';
+      const pulse = 5.2 + Math.sin(performance.now() * 0.008) * 1.4;
+
+      ctx.fillStyle = hex;
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 2.0;
+      ctx.beginPath();
+      ctx.arc(bx, bz, pulse, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.restore();
+    }
   }
 }

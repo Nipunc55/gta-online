@@ -659,3 +659,334 @@ body, html {
   letter-spacing: 0.5px;
   white-space: nowrap;
 }
+
+/* ============================================================
+   CINEMATIC CUTSCENE OVERLAY (Widescreen 2.39:1 Letterbox & Subtitles)
+   ============================================================ */
+#hud-overlay {
+  transition: opacity 0.45s ease;
+}
+
+.cutscene-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 65;
+  overflow: hidden;
+}
+
+.cutscene-overlay.cutscene-hidden .letterbox-top {
+  transform: translateY(-100%);
+}
+
+.cutscene-overlay.cutscene-hidden .letterbox-bottom {
+  transform: translateY(100%);
+}
+
+.cutscene-overlay.cutscene-hidden .cutscene-title-card {
+  opacity: 0;
+}
+
+.letterbox-bar {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 12vh;
+  min-height: 78px;
+  background: #040308;
+  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 28px rgba(0, 0, 0, 0.9);
+}
+
+.letterbox-top {
+  top: 0;
+  border-bottom: 1px solid rgba(255, 0, 127, 0.32);
+  justify-content: flex-start;
+  padding: 0 36px;
+}
+
+.letterbox-bottom {
+  bottom: 0;
+  border-top: 1px solid rgba(0, 255, 255, 0.28);
+  padding: 0 36px;
+}
+
+.cutscene-badge {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 4px;
+  color: rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 4px 10px;
+  border-radius: 4px;
+}
+
+.cutscene-title-card {
+  position: absolute;
+  left: 48px;
+  bottom: calc(12vh + 34px);
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+  text-shadow: 0 4px 18px rgba(0, 0, 0, 0.95);
+}
+
+.cutscene-title-card.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.cutscene-title-main {
+  font-family: 'Teko', sans-serif;
+  font-size: 54px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  line-height: 0.95;
+  color: #ffffff;
+  text-transform: uppercase;
+}
+
+.cutscene-title-sub {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 3.5px;
+  color: #f1c40f;
+  margin-top: 4px;
+  text-transform: uppercase;
+}
+
+.cutscene-subtitle {
+  max-width: 820px;
+  text-align: center;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.45;
+  color: #f5f6fa;
+  text-shadow: 0 2px 6px #000, 0 0 12px rgba(0, 0, 0, 0.95);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+
+.cutscene-subtitle.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.cutscene-speaker {
+  font-weight: 900;
+  letter-spacing: 1px;
+  margin-right: 6px;
+}
+
+.cutscene-skip-hint {
+  position: absolute;
+  right: 34px;
+  bottom: 22px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.cutscene-skip-hint span {
+  color: #00ffff;
+  font-weight: 900;
+}
+
+/* ============================================================
+   STORY MISSION OBJECTIVE HUD, LIVE COMMS & MISSION PASSED BANNER
+   ============================================================ */
+.mission-objective-box {
+  position: absolute;
+  top: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 390px;
+  max-width: 580px;
+  background: linear-gradient(135deg, rgba(10, 12, 24, 0.88), rgba(26, 14, 42, 0.86));
+  border: 1px solid rgba(241, 196, 15, 0.55);
+  border-top: 3px solid #f1c40f;
+  border-radius: 10px;
+  padding: 10px 20px 12px;
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.75), 0 0 18px rgba(241, 196, 15, 0.2);
+  backdrop-filter: blur(8px);
+  text-align: center;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  z-index: 44;
+}
+
+.mission-objective-box.mission-hidden {
+  opacity: 0;
+  transform: translate(-50%, -18px);
+  pointer-events: none;
+}
+
+.mission-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.mission-chapter-tag {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: #00ffff;
+  background: rgba(0, 255, 255, 0.12);
+  border: 1px solid rgba(0, 255, 255, 0.35);
+  padding: 2px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.mission-title-tag {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 2.5px;
+  color: #f1c40f;
+  text-transform: uppercase;
+}
+
+.mission-timer-tag {
+  font-family: 'Teko', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #ff3366;
+  background: rgba(255, 51, 102, 0.16);
+  border: 1px solid rgba(255, 51, 102, 0.45);
+  padding: 0 8px;
+  border-radius: 4px;
+  line-height: 1.1;
+}
+
+.mission-objective-main {
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 1.2px;
+  color: #ffffff;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+}
+
+.mission-objective-sub {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #cbd5e1;
+  margin-top: 3px;
+}
+
+/* Live Encrypted Phone / Radio Comms Box */
+.mission-comms-box {
+  position: absolute;
+  bottom: 225px;
+  left: 35px;
+  width: 325px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: linear-gradient(135deg, rgba(12, 18, 28, 0.92), rgba(20, 32, 48, 0.9));
+  border-left: 4px solid #2ecc71;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  border-right: 1px solid rgba(255, 255, 255, 0.14);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  padding: 11px 14px;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  z-index: 45;
+}
+
+.mission-comms-box.comms-hidden {
+  opacity: 0;
+  transform: translateX(-24px);
+  pointer-events: none;
+}
+
+.comms-avatar {
+  font-size: 24px;
+  background: rgba(46, 204, 113, 0.16);
+  border: 1px solid rgba(46, 204, 113, 0.45);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.comms-caller {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: #2ecc71;
+  text-transform: uppercase;
+  margin-bottom: 3px;
+}
+
+.comms-text {
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.38;
+  color: #f1f5f9;
+}
+
+/* Big GTA Mission Passed / Failed Celebration Banner */
+.mission-status-banner {
+  position: absolute;
+  top: 28%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(1);
+  text-align: center;
+  background: linear-gradient(90deg, transparent 0%, rgba(6, 8, 18, 0.88) 20%, rgba(6, 8, 18, 0.88) 80%, transparent 100%);
+  padding: 22px 90px;
+  border-top: 2px solid rgba(241, 196, 15, 0.65);
+  border-bottom: 2px solid rgba(241, 196, 15, 0.65);
+  pointer-events: none;
+  z-index: 75;
+  transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+}
+
+.mission-status-banner.banner-hidden {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.82);
+}
+
+.banner-headline {
+  font-family: 'Teko', sans-serif;
+  font-size: 86px;
+  font-weight: 700;
+  letter-spacing: 6px;
+  line-height: 0.92;
+  color: #f1c40f;
+  text-shadow: 0 0 28px rgba(241, 196, 15, 0.75), 0 4px 12px #000;
+  text-transform: uppercase;
+}
+
+.banner-subtitle {
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 4px;
+  color: #ffffff;
+  margin-top: 4px;
+  text-transform: uppercase;
+}
+
+.banner-reward {
+  font-family: 'Teko', sans-serif;
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: #55ff77;
+  margin-top: 4px;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9);
+}

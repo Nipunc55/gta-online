@@ -394,13 +394,15 @@ export class Vehicle {
 
           const impact = -relN;
           if (impact > 5) {
-            a.takeDamage(impact * 0.85, effects);
-            b.takeDamage(impact * 0.85, effects);
+            const bothPoliceAI = a.driver === 'police' && b.driver === 'police';
+            const dmgScale = bothPoliceAI ? 0.15 : 0.85;
+            a.takeDamage(impact * dmgScale, effects);
+            b.takeDamage(impact * dmgScale, effects);
             if (audio && (a.driver === 'player' || b.driver === 'player') && a.crashCooldown <= 0) {
               a.crashCooldown = 0.25;
               audio.play('crash', clamp(impact / 20, 0.3, 1.0), clamp(impact / 16, 0.4, 1.4));
             }
-            if (effects) {
+            if (effects && !bothPoliceAI) {
               effects.createImpactSparks(new THREE.Vector3(
                 (a.position.x + b.position.x) * 0.5,
                 a.position.y + 0.6,

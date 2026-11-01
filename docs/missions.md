@@ -122,24 +122,22 @@ export class Mission {
 
 | Feature | In Design Spec | In Code (`src/`) | Status |
 |---|---|---|---|
-| **Mission Class Interface** | Documented base class template | Not implemented (`src/missions/` does not exist) | ❌ Blueprint Only |
-| **Mission Archetypes** | Street Race, Taxi Dispatch, Gang Heist | Not implemented | ❌ Blueprint Only |
-| **Ammu-Nation Pricing** | Outflow cost for health/armor/ammo refills | Completely free refill in [`main.js#L248-L250`](file:///d:/My%20Side%20Projects/GTA%20online/src/main.js#L248-L250) | ⚠️ Diff (No cost charged) |
-| **Hospital Respawn Fee** | Hospital bill deducted on "WASTED" | Free respawn with \$0 deducted in [`main.js#L128-L132`](file:///d:/My%20Side%20Projects/GTA%20online/src/main.js#L128-L132) | ⚠️ Diff (No fee deducted) |
-| **Pay'n'Spray Repairs** | Vehicle repair and respray money sink | Not integrated into active generator or game loop | ❌ Not implemented |
+| **Mission Class Interface** | Documented base class template | Implemented in [`src/missions/Mission.js`](file:///d:/My%20Side%20Projects/GTA%20online/src/missions/Mission.js) & [`src/missions/MissionManager.js`](file:///d:/My%20Side%20Projects/GTA%20online/src/missions/MissionManager.js) | ✅ Implemented |
+| **Story Arc & Archetypes** | Story Trilogy, Gang Heist, Street Race | Implemented in [`src/missions/StoryMissions.js`](file:///d:/My%20Side%20Projects/GTA%20online/src/missions/StoryMissions.js) & [`src/core/CutsceneDirector.js`](file:///d:/My%20Side%20Projects/GTA%20online/src/core/CutsceneDirector.js) | ✅ Implemented |
+| **3D Waypoints & GPS Radar** | 3D beacons & minimap route line | Implemented in [`src/missions/WaypointMarker.js`](file:///d:/My%20Side%20Projects/GTA%20online/src/missions/WaypointMarker.js) & [`src/ui/HUD.js`](file:///d:/My%20Side%20Projects/GTA%20online/src/ui/HUD.js) | ✅ Implemented |
+| **Pay'n'Spray Repairs** | Vehicle repair and wanted star clear | Implemented in [`WaypointMarker.js`](file:///d:/My%20Side%20Projects/GTA%20online/src/missions/WaypointMarker.js) & [`MissionManager.js`](file:///d:/My%20Side%20Projects/GTA%20online/src/missions/MissionManager.js) (`Block [1, 2]`) | ✅ Implemented |
 | **Cash Wallet & Starting Balance** | \$2,500 starting cash | Implemented in [`Player.js#L33`](file:///d:/My%20Side%20Projects/GTA%20online/src/entities/Player.js#L33) | ✅ Implemented |
-| **NPC Cash Drops** | \$45 Civilians / \$120 Gangsters | Implemented in [`PedestrianSystem.js#L139-L166`](file:///d:/My%20Side%20Projects/GTA%20online/src/entities/PedestrianSystem.js#L139-L166) | ✅ Implemented |
-| **Interactive World Triggers** | Ammu-Nation & Hospital trigger zones | Implemented in [`main.js#L244-L254`](file:///d:/My%20Side%20Projects/GTA%20online/src/main.js#L244-L254) | ✅ Implemented |
-| **HUD Action Prompts & EventBus** | Prompts and lifecycle event broadcast | Implemented in [`HUD.js`](file:///d:/My%20Side%20Projects/GTA%20online/src/ui/HUD.js) & [`EventBus.js`](file:///d:/My%20Side%20Projects/GTA%20online/src/core/EventBus.js) | ✅ Implemented |
+| **NPC Cash Drops** | \$45 Civilians / \$120 Gangsters | Implemented in [`PedestrianSystem.js`](file:///d:/My%20Side%20Projects/GTA%20online/src/entities/PedestrianSystem.js) | ✅ Implemented |
+| **Interactive World Triggers** | Ammu-Nation, Safehouse & Hospital zones | Implemented in [`main.js`](file:///d:/My%20Side%20Projects/GTA%20online/src/main.js) & [`MissionManager.js`](file:///d:/My%20Side%20Projects/GTA%20online/src/missions/MissionManager.js) | ✅ Implemented |
+| **HUD Action Prompts & EventBus** | Prompts, Live Comms & Mission Banner | Implemented in [`HUD.js`](file:///d:/My%20Side%20Projects/GTA%20online/src/ui/HUD.js), [`MissionManager.js`](file:///d:/My%20Side%20Projects/GTA%20online/src/missions/MissionManager.js) & [`EventBus.js`](file:///d:/My%20Side%20Projects/GTA%20online/src/core/EventBus.js) | ✅ Implemented |
 
 ---
 
-## TODO Items
+## Completed & Remaining Items
 
-- [ ] **Core Mission Engine**: Create `src/missions/Mission.js` base class and `src/missions/MissionManager.js`.
-- [ ] **Street Race Mission**: Implement timed checkpoint race through glowing cylindrical 3D waypoints with timer HUD and cash payouts.
-- [ ] **Taxi Courier Mission**: Implement passenger pick-up spots, destination waypoints, and vehicle collision tip deductions.
-- [ ] **Gang Stronghold Heist**: Implement contraband package pickup, wave combat against armed gang NPCs, and post-heist police pursuit evasion.
-- [ ] **Ammu-Nation Economy**: Charge a balanced cash fee (\$250 to \$750) for health, armor, and ammo refills.
-- [ ] **Hospital Respawn Bill**: Deduct medical fee (\$500 or 10% of balance) upon player death respawn.
-- [ ] **Pay'n'Spray Auto Shop**: Add an active repair & respray garage zone in `CityGenerator.js` that restores vehicle health and clears wanted stars for \$500.
+- [x] **Core Mission Engine**: Created [`src/missions/Mission.js`](file:///d:/My%20Side%20Projects/GTA%20online/src/missions/Mission.js), [`src/missions/MissionManager.js`](file:///d:/My%20Side%20Projects/GTA%20online/src/missions/MissionManager.js), and [`src/missions/WaypointMarker.js`](file:///d:/My%20Side%20Projects/GTA%20online/src/missions/WaypointMarker.js).
+- [x] **Story Trilogy ("Out on Bail")**: Implemented `Mission1_FreshOut`, `Mission2_ArmedAndReady`, and `Mission3_PaybackPursuit` with 5 multi-shot cinematic cutscenes.
+- [x] **Street Race Mission**: Implemented `Mission4_StreetSprint` timed 6-checkpoint race through glowing 3D waypoints with timer HUD and \$5,000 payout.
+- [x] **Gang Stronghold Heist**: Implemented Vipers Eastside Compound assault, 5 armed syndicate guards with 3D overhead target markers, golden contraband briefcase pickup, and 2-star police pursuit evasion.
+- [x] **Pay'n'Spray Auto Shop**: Added Westside Pay'n'Spray garage in `Block [1, 2]` (`[-225, -163.5]`) that repairs vehicles and clears wanted stars.
+- [ ] **Taxi Courier Mission**: Optional future side-activity for passenger fares.

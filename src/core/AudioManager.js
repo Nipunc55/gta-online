@@ -73,7 +73,14 @@ export class AudioManager {
       explosion: 'playExplosion',
       pickup: 'playPickup',
       empty: 'playEmptyClick',
-      reload: 'playReload'
+      reload: 'playReload',
+      prisonDoor: 'playPrisonDoor',
+      carChirp: 'playCarChirp',
+      missionStart: 'playMissionStart',
+      missionPassed: 'playMissionPassed',
+      missionFailed: 'playMissionFailed',
+      radioComms: 'playRadioComms',
+      cratePickup: 'playCratePickup'
     }[name];
     if (!fnName || typeof this[fnName] !== 'function') return;
     const realMaster = this.masterGain;
@@ -175,6 +182,183 @@ export class AudioManager {
       n.connect(bp); bp.connect(g); g.connect(this.masterGain);
       n.start(t + off);
     });
+  }
+
+  playPrisonDoor() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    // Industrial security buzzer (harsh sawtooth buzz)
+    const buzz = this.ctx.createOscillator();
+    buzz.type = 'sawtooth';
+    buzz.frequency.setValueAtTime(115, t);
+    const buzzFilter = this.ctx.createBiquadFilter();
+    buzzFilter.type = 'bandpass';
+    buzzFilter.frequency.value = 420;
+    buzzFilter.Q.value = 2.5;
+    const buzzGain = this.ctx.createGain();
+    buzzGain.gain.setValueAtTime(0.28, t);
+    buzzGain.gain.setValueAtTime(0.28, t + 0.55);
+    buzzGain.gain.exponentialRampToValueAtTime(0.001, t + 0.65);
+    buzz.connect(buzzFilter);
+    buzzFilter.connect(buzzGain);
+    buzzGain.connect(this.masterGain);
+    buzz.start(t);
+    buzz.stop(t + 0.68);
+
+    // Heavy steel cell gate clank right as buzzer finishes
+    const clankTime = t + 0.52;
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = this._noiseBuffer(0.45, 0.22);
+    const bp = this.ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.setValueAtTime(950, clankTime);
+    bp.Q.value = 3.0;
+    const ng = this.ctx.createGain();
+    ng.gain.setValueAtTime(0.65, clankTime);
+    ng.gain.exponentialRampToValueAtTime(0.001, clankTime + 0.42);
+    noise.connect(bp);
+    bp.connect(ng);
+    ng.connect(this.masterGain);
+    noise.start(clankTime);
+
+    const thud = this.ctx.createOscillator();
+    thud.type = 'triangle';
+    thud.frequency.setValueAtTime(160, clankTime);
+    thud.frequency.exponentialRampToValueAtTime(42, clankTime + 0.28);
+    const tg = this.ctx.createGain();
+    tg.gain.setValueAtTime(0.55, clankTime);
+    tg.gain.exponentialRampToValueAtTime(0.001, clankTime + 0.32);
+    thud.connect(tg);
+    tg.connect(this.masterGain);
+    thud.start(clankTime);
+    thud.stop(clankTime + 0.35);
+  }
+
+  playCarChirp() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    // Double high-pitched key-fob unlock chirp
+    [0, 0.13].forEach((offset) => {
+      const osc = this.ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(2150, t + offset);
+      osc.frequency.exponentialRampToValueAtTime(2650, t + offset + 0.065);
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(0.001, t + offset);
+      g.gain.linearRampToValueAtTime(0.22, t + offset + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.001, t + offset + 0.08);
+      osc.connect(g);
+      g.connect(this.masterGain);
+      osc.start(t + offset);
+      osc.stop(t + offset + 0.09);
+    });
+  }
+
+  playMissionStart() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    // Sleek Vice City two-note synth chime
+    [523.25, 783.99].forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, t + idx * 0.11);
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(0.001, t + idx * 0.11);
+      g.gain.linearRampToValueAtTime(0.22, t + idx * 0.11 + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.001, t + idx * 0.11 + 0.35);
+      osc.connect(g);
+      g.connect(this.masterGain);
+      osc.start(t + idx * 0.11);
+      osc.stop(t + idx * 0.11 + 0.38);
+    });
+  }
+
+  playMissionPassed() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    // GTA-style triumphant synth brass chord fanfare (D minor -> A7 -> D major resolve)
+    const notes = [
+      { f: 293.66, start: 0.0, dur: 0.25 },
+      { f: 440.00, start: 0.18, dur: 0.25 },
+      { f: 523.25, start: 0.36, dur: 0.28 },
+      { f: 587.33, start: 0.58, dur: 1.45 },
+      { f: 440.00, start: 0.58, dur: 1.45 },
+      { f: 369.99, start: 0.58, dur: 1.45 }
+    ];
+    for (const n of notes) {
+      const osc = this.ctx.createOscillator();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(n.f, t + n.start);
+      const lp = this.ctx.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.frequency.setValueAtTime(1950, t + n.start);
+      lp.frequency.exponentialRampToValueAtTime(650, t + n.start + n.dur);
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(0.001, t + n.start);
+      g.gain.linearRampToValueAtTime(0.18, t + n.start + 0.03);
+      g.gain.exponentialRampToValueAtTime(0.001, t + n.start + n.dur);
+      osc.connect(lp);
+      lp.connect(g);
+      g.connect(this.masterGain);
+      osc.start(t + n.start);
+      osc.stop(t + n.start + n.dur + 0.05);
+    }
+  }
+
+  playMissionFailed() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    [220, 164.81].forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(freq, t + idx * 0.28);
+      osc.frequency.exponentialRampToValueAtTime(freq * 0.72, t + idx * 0.28 + 0.45);
+      const lp = this.ctx.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.frequency.value = 480;
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(0.28, t + idx * 0.28);
+      g.gain.exponentialRampToValueAtTime(0.001, t + idx * 0.28 + 0.5);
+      osc.connect(lp);
+      lp.connect(g);
+      g.connect(this.masterGain);
+      osc.start(t + idx * 0.28);
+      osc.stop(t + idx * 0.28 + 0.55);
+    });
+  }
+
+  playRadioComms() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    // Two-tone encrypted walkie/phone chirp
+    [1480, 1920].forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t + idx * 0.055);
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(0.12, t + idx * 0.055);
+      g.gain.exponentialRampToValueAtTime(0.001, t + idx * 0.055 + 0.048);
+      osc.connect(g);
+      g.connect(this.masterGain);
+      osc.start(t + idx * 0.055);
+      osc.stop(t + idx * 0.055 + 0.055);
+    });
+  }
+
+  playCratePickup() {
+    if (!this.ctx) return;
+    this.playPickup();
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(1174.66, t + 0.14);
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.22, t + 0.14);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.48);
+    osc.connect(g);
+    g.connect(this.masterGain);
+    osc.start(t + 0.14);
+    osc.stop(t + 0.5);
   }
 
   initEngineAudio() {

@@ -53,22 +53,26 @@ flowchart TD
     H -->|No| J[Cruiser Continues Vehicle Pursuit]
 ```
 
-### 1. BFS Road Graph Pathfinding
-When cruisers are further than 36 meters away, they compute the shortest path across intersection nodes (`layout.findPath(fromId, toId)`) rather than driving into solid skyscraper walls.
+### 1. Multi-Route Tactical BFS Pathfinding
+When cruisers are further than 42 meters away **or** lack direct building line-of-sight (`!colliders.hasLineOfSight`), they compute road-graph paths (`findTacticalPath(fromId, toId, occupiedNodes)`) and follow right-hand lane offsets (`LANE_OFFSETS`). Secondary cruisers penalize road nodes already claimed by the lead cruiser so they naturally flank from parallel streets instead of forming a single-file pile-up.
 
-### 2. Vehicle-Based Pursuit Physics
-Cruisers use `Vehicle.stepPhysics()` with:
-- `throttle`: Up to $0.95$ on open straightaways.
-- `steer`: Clamped angle differential $\text{clamp}(\Delta\theta \times 2.1, -1, 1)$.
-- `handbrake`: Automatically pulled if angle delta $> 1.35\text{ rad}$ while traveling faster than $14\text{ m/s}$ to whip the cruiser around tight corners.
-- `antiStuck`: If cruiser speed stays below $1.2\text{ m/s}$ for $> 1.1\text{s}$, the AI automatically reverses and counter-steers to back out of obstacles.
+### 2. Squad Roles, Formation Slots & Avoidance
+Active cruisers are dynamically sorted by proximity and assigned one of four tactical roles (`TAIL`, `FLANK_LEFT`, `FLANK_RIGHT`, `INTERCEPT`):
+- **Vehicle Pursuit (`PURSUIT` Mode)**:
+  - **1–2 Stars**: Controlled pacing speed (`78%–88%` max speed); the `TAIL` cruiser maintains a safe following distance behind the player while flankers pull alongside without reckless head-on ramming.
+  - **3+ Stars**: Full interceptor speed; `TAIL` targets the rear quarter panel for PIT maneuvers, `FLANK_LEFT` and `FLANK_RIGHT` pinch lateral escape lanes, and `INTERCEPT` leads the player's velocity vector (`playerPos + playerVel * lookahead`) to cut off intersections.
+- **Perimeter Standoff (`PERIMETER` Mode)**:
+  - When the player is on foot or stationary (`speed < 3.5 m/s`), cruisers claim distinct angular slots on a `13–16m` standoff arc around the player and progressively brake inside `30m` so they never kamikaze into the player or each other.
+- **Multi-Layer Obstacle & Friendly-Fire Avoidance (`computeAvoidance`)**:
+  - **Cruiser-to-Cruiser Separation**: Forward corridor detection and lateral separation bubbles prevent police cars from rear-ending or sideswiping fellow cruisers (both active and dismounted).
+  - **Friendly Officer Protection**: Cruisers brake and steer around dismounted `police` officers on foot.
+  - **3-Feeler Wall Raycasts**: Left, center, and right whisker raycasts (`colliders.raycast`) steer cruisers away from building corners and static props before impact.
 
-### 3. Tactical Officer Dismount
-If the player is on foot and a cruiser closes to within $15.5\text{ meters}$:
-1. The cruiser locks its handbrake.
-2. The driver seat empties.
-3. An armed Police Officer NPC spawns on the driver-side door ($x_{\text{door}}, z_{\text{door}}$).
-4. The officer immediately enters `COMBAT` state, drawing a service pistol, tracking line-of-sight, and coordinating fire with other units.
+### 3. Tactical Officer Dismount & Foot Combat
+If the player is on foot and a cruiser brakes into perimeter range (`dist < 18.5m`, `speed < 7.5 m/s`) with line-of-sight:
+1. The cruiser locks its handbrake at its perimeter slot.
+2. An armed Police Officer NPC spawns on the safe door side.
+3. Foot officers in `COMBAT` maintain `3.75m` squad spacing from fellow officers, hold an optimal `10–18m` firing line, backpedal if the player gets within `7.5m`, strafe laterally while aiming, and sidestep perpendicular to oncoming vehicles.
 
 ---
 
